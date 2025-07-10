@@ -6,6 +6,6 @@ Our goal is to build a comprehensive **database** focused on **mechanical equipm
 The inspiration for this project comes from **Pandawiki**, and development is currently ongoing.
 
 To get started, please first download the project to your local machine. We recommend using **PyCharm IDE** for the best experience.  
-Follow the setup instructions to install the required **packages**, configure the **environment**, and run **app.py**.
+Follow the setup instructions to install the required **packages**, configure the environment, and run **app.py**.
 
-Once the project is running, it will display the **IP address** of your current host. Simply open that address in your browser to access the **web version of MechMind**.
+Once the project is running, it will display the **IP address** of your current host. Simply open that address in your browser to access the web version of MechMind.
