@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PandaWiki Lite</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h1 class="mb-4 text-center">📚 MechMind </h1>
+
+    <!-- 📁 新建文件夹 -->
+    <div class="card mb-4">
+        <div class="card-header">📁 新建文件夹</div>
+        <div class="card-body">
+            <form action="/create_folder" method="post" class="row g-3">
+                <div class="col-md-10">
+                    <input type="text" name="folder_name" placeholder="输入文件夹名称" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-secondary w-100">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 📤 上传文件 -->
+    <div class="card mb-4">
+        <div class="card-header">上传文件（支持 PDF、DOCX、TXT）</div>
+        <div class="card-body">
+            <form action="/upload" method="post" enctype="multipart/form-data" class="row g-3">
+                <div class="col-md-4">
+                    <input type="file" name="file" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <select name="folder" class="form-select" required>
+                        {% for folder in folders %}
+                        <option value="{{ folder }}">{{ folder }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary w-100">上传</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 💬 智能问答 -->
+    <div class="card mb-4">
+        <div class="card-header">💬 智能问答 <small class="text-muted">(结合上传资料进行回答)</small></div>
+        <div class="card-body">
+            <form action="/ask" method="post" class="row g-3">
+                <div class="col-md-10">
+                    <input type="text" name="question" placeholder="请输入问题..." class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-success w-100">提问</button>
+                </div>
+            </form>
+
+            {% if voice_text %}
+            <div class="mt-3 alert alert-warning">
+                <strong>📝 语音识别内容：</strong>
+                <span id="recognized-text">{{ voice_text }}</span>
+                <button class="btn btn-sm btn-outline-dark ms-2" onclick="copyText()">复制</button>
+            </div>
+            {% endif %}
+
+            {% if answer %}
+            <div class="mt-3 alert alert-info">
+                <strong>🤖 模型回答：</strong> {{ answer }}
+            </div>
+            {% endif %}
+<!--            {% if source_chunks %}-->
+<!--            <div class="mt-3 card border-info">-->
+<!--                <div class="card-header bg-info text-white">-->
+<!--                    🔍 使用的资料上下文（RAG召回）-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <details>-->
+<!--                        <summary>点击展开查看检索到的片段</summary>-->
+<!--                        <ul class="mt-2">-->
+<!--                            {% for chunk in source_chunks %}-->
+<!--                            <li class="mb-2"><code>{{ chunk }}</code></li>-->
+<!--                            {% endfor %}-->
+<!--                        </ul>-->
+<!--                    </details>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--            {% endif %}-->
+
+            {% if source_chunks %}
+            <div class="mt-3 alert alert-secondary">
+                <strong>📄 引用资料片段：</strong>
+                <ul class="mt-2">
+                    {% for chunk in source_chunks %}
+                    <li style="font-size: small;">{{ chunk }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 🎙️ 浏览器语音提问 -->
+    <div class="card mb-4">
+        <div class="card-header">🎙️ 浏览器录音识别提问</div>
+        <div class="card-body">
+            <button onclick="startRecording()" class="btn btn-warning">开始录音</button>
+            <button onclick="stopRecording()" class="btn btn-secondary">停止录音</button>
+            <form id="voice-form" action="/ask_from_voice" method="post" enctype="multipart/form-data" class="mt-3">
+                <input type="hidden" name="audio_blob" id="audio_blob_input">
+                <button type="submit" class="btn btn-success mt-2">提交并提问</button>
+            </form>
+            <p id="voice-status" class="mt-2 text-muted"></p>
+        </div>
+    </div>
+
+    <!-- 📁 上传音频文件提问 -->
+    <div class="card mb-4">
+        <div class="card-header">📁 上传音频文件识别提问</div>
+        <div class="card-body">
+            <form action="/ask_from_audio" method="post" enctype="multipart/form-data">
+                <input type="file" name="audio_file" class="form-control" accept="audio/*" required>
+                <input type="submit" class="btn btn-primary mt-2" value="提交并提问">
+            </form>
+        </div>
+    </div>
+
+    <!-- 📊 上传 Excel 文件提问 -->
+    <div class="card mb-4">
+        <div class="card-header">📊 上传 Excel 表格提问</div>
+        <div class="card-body">
+            <form action="/ask_from_excel" method="post" enctype="multipart/form-data">
+                <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                <textarea name="excel_question" class="form-control mt-2" placeholder="请输入你对 Excel 表格的提问..." rows="3" required></textarea>
+                <input type="submit" class="btn btn-success mt-2" value="提交问题">
+            </form>
+        </div>
+    </div>
+
+    <!-- 📂 文件管理 -->
+    {% for folder, files in folder_files.items() %}
+    <div class="card mb-3">
+        <div class="card-header">{{ folder }}</div>
+        <div class="card-body">
+            {% if files %}
+            <ul class="list-group">
+                {% for file in files %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ file }}
+                    <span>
+                        <a href="{{ url_for('view_file', folder=folder, filename=file) }}" target="_blank" class="btn btn-sm btn-outline-secondary">查看</a>
+                        <a href="{{ url_for('download_file', folder=folder, filename=file) }}" class="btn btn-sm btn-outline-primary">下载</a>
+                        <a href="{{ url_for('delete_file', folder=folder, filename=file) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('确认删除 {{ file }} 吗？')">删除</a>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+                <p>（该文件夹暂无文件）</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 📢 JS 引入 -->
+<script src="{{ url_for('static', filename='recorder.js') }}"></script>
+<script>
+function copyText() {
+    const text = document.getElementById("recognized-text").innerText;
+    navigator.clipboard.writeText(text).then(function () {
+        alert("✅ 已复制识别内容！");
+    }, function (err) {
+        alert("❌ 无法复制：" + err);
+    });
+}
+</script>
+
+</body>
+</html>
